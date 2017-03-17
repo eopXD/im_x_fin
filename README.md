@@ -1,5 +1,4 @@
 資管財金工作坊-情感文本分析
-IM X FIN
 ============
 CSV I/O
 * read_csv.py
