@@ -1,6 +1,6 @@
 資管財金工作坊-情感文本分析
 ============
-CSV I/O
+CSV Input/Output
 * read_csv.py
 
 Jieba 切割
