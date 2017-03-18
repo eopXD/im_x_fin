@@ -11,11 +11,55 @@ from datetime import datetime
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
+#=============def csv read
+import csv, codecs, string, cStringIO
+
+def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
+    # csv.py doesn't do Unicode; encode temporarily as UTF-8:
+    csv_reader = csv.reader(utf_8_encoder(unicode_csv_data),
+                            dialect=dialect, **kwargs)
+    for row in csv_reader:
+        # decode UTF-8 back to Unicode, cell by cell:
+        yield [unicode(cell, 'utf-8') for cell in row]
+
+def utf_8_encoder(unicode_csv_data):
+    for line in unicode_csv_data:
+        yield line.encode('utf-8')
+        
+class UnicodeWriter:
+    """
+    A CSV writer which will write rows to CSV file "f",
+    which is encoded in the given encoding.
+    """
+
+    def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
+        # Redirect output to a queue
+        self.queue = cStringIO.StringIO()
+        self.writer = csv.writer(self.queue, dialect=dialect, **kwds)
+        self.stream = f
+        self.encoder = codecs.getincrementalencoder(encoding)()
+
+    def writerow(self, row):
+        self.writer.writerow([s.encode("utf-8") for s in row])
+        # Fetch UTF-8 output from the queue ...
+        data = self.queue.getvalue()
+        data = data.decode("utf-8")
+        # ... and reencode it into the target encoding
+        data = self.encoder.encode(data)
+        # write to the target stream
+        self.stream.write(data)
+        # empty queue
+        self.queue.truncate(0)
+
+    def writerows(self, rows):
+        for row in rows:
+            self.writerow(row)
+#==============end csv read and write
 
 #Build ctop(終止符號) list=============================
 re_float = re.compile('([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?')
 cstop = ['NumWord', u'\u3000', '~', '!', '?']
-stoplist = "cstop.dic"
+stoplist = "text/cstop.dic"
 fstop1 = codecs.open(stoplist,'r',encoding='utf8')
 for aline in fstop1:
     aline = aline.strip()
@@ -26,18 +70,20 @@ for aline in fstop1:
 fstop1.close()
 #End Build============================================
 
-jieba.load_userdict('/text/newword.txt')
-asent = u"台泥、台塑鐵橋案澳盛銀登聯貸六強,湯森路透旗下基點雜誌昨（30）日公布最新聯貸統計，今年前三季，\
-台灣銀行蟬聯聯貸主辦與管理行雙料冠軍。其中，台銀主辦聯貸市占率達11.94%，擔任管理行的市占率為16.03%，領先銀行同業。\
-值得注意的是，名列第六的澳盛銀，是唯一擠入前十名的外銀。據了解，澳盛銀主辦台泥、台塑鐵橋等美元聯貸，\
-激烈的聯貸市場上搶贏國銀，引起市場矚目。統計顯示，不包括日本在內的亞太區，今年前三季聯貸主辦龍頭為中國工商銀行，\
-市占率為7.7%。積極進軍聯貸市場的澳盛銀行高居第二，市占率為7%。根據湯森路透提供資料顯示，今年前三季，\
-不包含日本的亞太區聯貸總額為3,367億美元、1,056筆，金額較去年同期長5.6%。國內銀行過度競爭，企業金融業務競爭激烈，\
-聯貸名列前茅的業者，多是資金雄厚的大型公股銀行。第3季台銀主辦南茂科技、中租控股集團海外子公司、威剛科技、\
-馥御建設等多起聯貸案；累計前三季主辦48件聯貸案，金額28.37億美元。"
-asent=asent.decode('utf8')
-words =jieba.cut(asent, cut_all = False)
+jieba.load_userdict('text/newword.txt')
+infile = "text/samplenews_500.csv"
+fh1=codecs.open(infile,'rb',encoding='utf8')
+reader = unicode_csv_reader(fh1)
+cid_title = 4 #title column
+cid_content=5 #content column
+header= reader.next()
 
+words=[]
+for x in reader:
+	strall=x[cid_title] + "\n" + x[cid_content]
+	tmp=jieba.cut(strall,cut_all=False)
+	for y in tmp:
+		words.append(y)
 res=[]
 for at in words:
 	at = at.strip(' ;=.-,/()%:"[]*\n')
@@ -74,14 +120,19 @@ fhp1.close()
 
 pos=[x for x in res if x in poslist]
 neg=[x for x in res if x in neglist]
-print "========================="
-print "|    POSITIVE FOUND     |"
-print "========================="
-for x in pos:
-	print x
-print "========================="
-print "|    NEGATIVE FOUND     |"
-print "========================="
-for x in neg:
-	print x
-print "========================="
+
+outcsv="out/output_pos_neg.csv"
+fh = codecs.open(outcsv, 'wb')
+writer = UnicodeWriter(fh)
+
+writer.writerow("=========================")
+writer.writerow("|    POSITIVE FOUND     |")
+writer.writerow("=========================")
+writer.writerow(pos)
+
+writer.writerow("=========================")
+writer.writerow("|    NEGATIVE FOUND     |")
+writer.writerow("=========================")
+writer.writerow(neg)
+
+fh.close()

@@ -2,10 +2,10 @@
 import jieba
 import codecs, string, cStringIO
 import re
-jieba.load_userdict('/text/newword.txt')
+jieba.load_userdict('text/newword.txt')
 
 re_float = re.compile('([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?')
-stoplist = "/text/cstop.dic"
+stoplist = "text/cstop.dic"
 fstop1 = codecs.open(stoplist,'r',encoding='utf8')
 cstop=[]
 for aline in fstop1:
