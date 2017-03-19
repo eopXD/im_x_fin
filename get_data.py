@@ -25,13 +25,12 @@ except psycopg2.DatabaseError, dbnamee:
 cur.execute("select title,content from twnews where stock_id=2707  limit 10")
 res=cur.fetchall()
 
-#=============def csv read
+#=======Define CSV Reader and Writer for UTF-8 encoding
 import csv, codecs, string, cStringIO
 
 def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
     # csv.py doesn't do Unicode; encode temporarily as UTF-8:
-    csv_reader = csv.reader(utf_8_encoder(unicode_csv_data),
-                            dialect=dialect, **kwargs)
+    csv_reader = csv.reader(utf_8_encoder(unicode_csv_data),dialect=dialect, **kwargs)
     for row in csv_reader:
         # decode UTF-8 back to Unicode, cell by cell:
         yield [unicode(cell, 'utf-8') for cell in row]
@@ -39,7 +38,7 @@ def unicode_csv_reader(unicode_csv_data, dialect=csv.excel, **kwargs):
 def utf_8_encoder(unicode_csv_data):
     for line in unicode_csv_data:
         yield line.encode('utf-8')
-        
+
 class UnicodeWriter:
     """
     A CSV writer which will write rows to CSV file "f",
@@ -73,5 +72,5 @@ class UnicodeWriter:
 outcsv="out/output_data.csv"
 fh = codecs.open(outcsv, 'wb')
 writer = UnicodeWriter(fh)
-writer.writerow(res)
+writer.writerows(res)
 fh.close()
